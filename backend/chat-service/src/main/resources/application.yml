@@ -1,0 +1,32 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: chat-service
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_USERNAME:ptitmeet}:${MONGO_PASSWORD:ptitmeet_mongo_pass}@${MONGO_HOST:localhost}:27017/ptitmeet_chat_db?authSource=admin
+      database: ptitmeet_chat_db
+
+logging:
+  level:
+    com.ptitmeet.chat: DEBUG
+
+grpc:
+  server:
+    port: 9083
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

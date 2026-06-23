@@ -1,0 +1,10 @@
+
+export const AppView = {
+    LANDING: 'LANDING',
+    SIGNUP: 'SIGNUP',
+    LOGIN: 'LOGIN',
+    WAITING_ROOM: 'WAITING_ROOM',
+    MEETING: 'MEETING',
+    SUMMARY: 'SUMMARY',
+    SCHEDULE: 'SCHEDULE'
+};

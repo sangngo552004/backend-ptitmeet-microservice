@@ -1,0 +1,9 @@
+
+{
+  "name": "MeetPro Video Conferencing",
+  "description": "A modern, high-performance video conferencing UI built for seamless collaboration and enterprise-grade security.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

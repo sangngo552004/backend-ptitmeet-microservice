@@ -1,0 +1,271 @@
+version: '3.8'
+services:
+  # MySQL cho Identity Service
+  mysql-identity:
+    image: mysql:8.0
+    container_name: ptitmeet-mysql-identity
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ptitmeet_identity_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_identity_data:/var/lib/mysql
+    networks:
+      - ptitmeet-network
+
+  # MySQL cho Meeting Service
+  mysql-meeting:
+    image: mysql:8.0
+    container_name: ptitmeet-mysql-meeting
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ptitmeet_meeting_db
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_meeting_data:/var/lib/mysql
+    networks:
+      - ptitmeet-network
+
+  # MySQL cho Media Service
+  mysql-media:
+    image: mysql:8.0
+    container_name: ptitmeet-mysql-media
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ptitmeet_media_db
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql_media_data:/var/lib/mysql
+    networks:
+      - ptitmeet-network
+
+  # MongoDB cho Chat Service
+  mongodb:
+    image: mongo:7.0
+    container_name: ptitmeet-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ptitmeet_chat_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - ptitmeet-network
+
+  # Redis cho Identity Service (token store)
+  redis:
+    image: redis:7.2-alpine
+    container_name: ptitmeet-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ptitmeet-network
+
+  # Apache Kafka (KRaft mode — không cần Zookeeper)
+  # Dùng image 7.9.x tương đương Kafka 3.9 (KRaft GA, stable)
+  kafka:
+    image: confluentinc/cp-kafka:7.9.0
+    container_name: ptitmeet-kafka
+    ports:
+      - "9092:9092"
+      - "9101:9101"    # JMX (optional, debug)
+    environment:
+      # ── KRaft Mode ──────────────────────────────────────────────
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller          # Single node đóng cả 2 vai trò
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093  # NodeId@host:controllerPort
+
+      # ── Listeners ───────────────────────────────────────────────
+      # PLAINTEXT: cho các service trong Docker network
+      # CONTROLLER: dùng nội bộ cho KRaft consensus
+      # PLAINTEXT_HOST: cho kết nối từ host machine (localhost:9092)
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # ── KRaft Cluster ID (bắt buộc — phải là UUID base64 hợp lệ) ──
+      # Sinh 1 lần bằng lệnh: docker run --rm confluentinc/cp-kafka:7.9.0 kafka-storage random-uuid
+      # Sau đó thay vào đây, hoặc để script init tự sinh (xem volumes bên dưới)
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+      # ── Topic / Replication ──────────────────────────────────────
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1       # Single broker → 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+
+      # ── Performance / Dev settings ───────────────────────────────
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0      # Không delay rebalance trong dev
+      KAFKA_LOG_RETENTION_HOURS: 168                 # 7 ngày
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+
+      # ── JMX (optional) ──────────────────────────────────────────
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - ptitmeet-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka:29092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Eureka Server
+  eureka-server:
+    build: ./backend/eureka-server
+    container_name: ptitmeet-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - ptitmeet-network
+
+  api-gateway:
+    build: ./backend/api-gateway
+    container_name: ptitmeet-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_HOST=eureka-server
+    depends_on:
+      - eureka-server
+    networks:
+      - ptitmeet-network
+
+  identity-service:
+    build: ./backend/identity-service
+    container_name: ptitmeet-identity
+    ports:
+      - "8081:8081"
+      - "9081:9081"
+    environment:
+      - EUREKA_HOST=eureka-server
+      - MYSQL_IDENTITY_HOST=mysql-identity
+      - MYSQL_IDENTITY_PORT=3306
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    depends_on:
+      - eureka-server
+      - mysql-identity
+      - redis
+    networks:
+      - ptitmeet-network
+
+  meeting-service:
+    build: ./backend/meeting-service
+    container_name: ptitmeet-meeting
+    ports:
+      - "8082:8082"
+      - "9082:9082"
+    environment:
+      - EUREKA_HOST=eureka-server
+      - MYSQL_MEETING_HOST=mysql-meeting
+      - MYSQL_MEETING_PORT=3306
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - LIVEKIT_HOST=${LIVEKIT_HOST}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - LIVEKIT_WEBHOOK_SECRET=${LIVEKIT_WEBHOOK_SECRET}
+    depends_on:
+      - eureka-server
+      - mysql-meeting
+    networks:
+      - ptitmeet-network
+
+  chat-service:
+    build: ./backend/chat-service
+    container_name: ptitmeet-chat
+    ports:
+      - "8083:8083"
+      - "9083:9083"
+    environment:
+      - EUREKA_HOST=eureka-server
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USERNAME=${MONGO_USERNAME}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - eureka-server
+      - mongodb
+      - kafka
+    networks:
+      - ptitmeet-network
+
+  media-service:
+    build: ./backend/media-service
+    container_name: ptitmeet-media
+    ports:
+      - "8084:8084"
+      - "9084:9084"
+    environment:
+      - EUREKA_HOST=eureka-server
+      - MYSQL_MEDIA_HOST=mysql-media
+      - MYSQL_MEDIA_PORT=3306
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - LIVEKIT_HOST=${LIVEKIT_HOST}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    depends_on:
+      - eureka-server
+      - mysql-media
+      - kafka
+    networks:
+      - ptitmeet-network
+
+  frontend:
+    build: 
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+    container_name: ptitmeet-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - ptitmeet-network
+
+volumes:
+  mysql_identity_data:
+  mysql_meeting_data:
+  mysql_media_data:
+  mongodb_data:
+  redis_data:
+  kafka_data:
+
+networks:
+  ptitmeet-network:
+    driver: bridge

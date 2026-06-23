@@ -1,0 +1,77 @@
+server:
+  port: 8081
+
+logging:
+  level:
+    com.ptitmeet.identity: DEBUG
+
+grpc:
+  server:
+    port: 9081
+
+spring:
+  application:
+    name: identity-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_IDENTITY_HOST:localhost}:${MYSQL_IDENTITY_PORT:3307}/ptitmeet_identity_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:ptitmeet_root_pass}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:ptitmeet_redis_pass}
+      timeout: 2000ms
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+jwt:
+  secret: ${JWT_SECRET:default-secret-key-change-in-production-min-256-bit}
+  access-token-expiration: 1800000      # 30 phút (ms)
+  refresh-token-expiration: 2592000     # 30 ngày (giây) - dùng cho Redis TTL
+  reset-token-expiration: 900           # 15 phút (giây) - dùng cho Redis TTL
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:ptitmeet-recordings}
+    region: ${AWS_S3_REGION:ap-southeast-1}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    avatar-prefix: avatars/

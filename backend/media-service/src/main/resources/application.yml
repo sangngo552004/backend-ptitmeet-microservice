@@ -1,0 +1,51 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: media-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_MEDIA_HOST:localhost}:${MYSQL_MEDIA_PORT:3309}/ptitmeet_media_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:ptitmeet_root_pass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+livekit:
+  host: ${LIVEKIT_HOST:http://localhost:7880}
+  api-key: ${LIVEKIT_API_KEY:devkey}
+  api-secret: ${LIVEKIT_API_SECRET:secret}
+  webhook-secret: ${LIVEKIT_WEBHOOK_SECRET:secret}
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:ptitmeet-recordings}
+    region: ${AWS_S3_REGION:ap-southeast-1}
+    access-key: ${AWS_ACCESS_KEY_ID:minioadmin}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:minioadmin}
+
+services:
+  meeting-url: ${MEETING_SERVICE_URL:http://localhost:8082}
+
+grpc:
+  server:
+    port: 9084
+  client:
+    meeting-grpc-client:
+      address: static://localhost:9082
+      negotiation-type: plaintext
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

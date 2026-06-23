@@ -1,0 +1,30 @@
+syntax = "proto3";
+package ptitmeet.identity;
+option java_package = "com.ptitmeet.grpc.identity";
+option java_outer_classname = "IdentityServiceProto";
+option java_multiple_files = true;
+
+service IdentityGrpcService {
+    rpc GetUserById (GetUserRequest) returns (UserInfoResponse);
+    rpc GetUsersBatch (GetUsersBatchRequest) returns (UserListResponse);
+}
+
+message GetUserRequest {
+    string user_id = 1;
+}
+
+message GetUsersBatchRequest {
+    repeated string user_ids = 1;
+}
+
+message UserInfoResponse {
+    string user_id = 1;
+    string email = 2;
+    string full_name = 3;
+    string avatar_url = 4;
+    string auth_provider = 5;
+}
+
+message UserListResponse {
+    repeated UserInfoResponse users = 1;
+}

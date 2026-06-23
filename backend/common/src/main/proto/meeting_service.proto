@@ -1,0 +1,20 @@
+syntax = "proto3";
+package ptitmeet.meeting;
+option java_package = "com.ptitmeet.grpc.meeting";
+option java_outer_classname = "MeetingServiceProto";
+option java_multiple_files = true;
+
+service MeetingGrpcService {
+    rpc GetMeetingOwner (GetMeetingOwnerRequest) returns (MeetingOwnerResponse);
+}
+
+message GetMeetingOwnerRequest {
+    string meeting_code = 1;
+}
+
+message MeetingOwnerResponse {
+    string owner_id = 1;
+    string host_id = 2;
+    string meeting_id = 3;
+    string status = 4;
+}

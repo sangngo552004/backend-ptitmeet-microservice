@@ -1,0 +1,37 @@
+syntax = "proto3";
+package ptitmeet.media;
+option java_package = "com.ptitmeet.grpc.media";
+option java_outer_classname = "MediaServiceProto";
+option java_multiple_files = true;
+
+service MediaGrpcService {
+    rpc StartRecording (StartRecordingRequest) returns (RecordingResponse);
+    rpc StopRecording (StopRecordingRequest) returns (EmptyResponse);
+    rpc CompensateRecording (CompensateRequest) returns (EmptyResponse);
+}
+
+message StartRecordingRequest {
+    string meeting_code = 1;
+    string owner_id = 2;
+}
+
+message StopRecordingRequest {
+    string egress_id = 1;
+}
+
+message CompensateRequest {
+    string egress_id = 1;
+}
+
+message RecordingResponse {
+    int64 id = 1;
+    string room_name = 2;
+    string egress_id = 3;
+    string meeting_id = 4;
+    string owner_id = 5;
+    string status = 6;
+    string file_url = 7;
+    string created_at = 8;
+}
+
+message EmptyResponse {}
