@@ -78,9 +78,11 @@ public class MeetingServiceImpl implements MeetingService {
                 .build();
         meeting = meetingRepository.save(meeting);
 
+        String hostDisplayName = resolveDisplayName(userName, userId, "Host");
+
         Participant hostParticipant = participantRepository.save(Participant.builder()
                 .meeting(meeting).userId(userId)
-                .displayName(userName != null ? userName : "Host")
+                .displayName(hostDisplayName)
                 .role(Participant.Role.HOST).approvalStatus(Participant.ApprovalStatus.APPROVED)
                 .build());
 
@@ -216,12 +218,17 @@ public class MeetingServiceImpl implements MeetingService {
 
         Participant participant = participantRepository
                 .findByMeetingAndUserId(meeting, userId).orElse(null);
+        String resolvedDisplayName = resolveDisplayName(
+                req.getDisplayName(), userId, isPrivileged ? "Host" : "Participant");
         if (participant == null) {
             participant = participantRepository.save(Participant.builder()
                     .meeting(meeting).userId(userId)
-                    .displayName(resolveDisplayName(req.getDisplayName(), userId))
+                    .displayName(resolvedDisplayName)
                     .role(isPrivileged ? Participant.Role.HOST : Participant.Role.GUEST)
                     .approvalStatus(Participant.ApprovalStatus.PENDING).build());
+        } else if (shouldUpdateDisplayName(participant.getDisplayName(), req.getDisplayName(), resolvedDisplayName)) {
+            participant.setDisplayName(resolvedDisplayName);
+            participant = participantRepository.save(participant);
         }
 
         Optional<ParticipantSession> latestSession = participantSessionRepository
@@ -380,7 +387,9 @@ public class MeetingServiceImpl implements MeetingService {
             messagingTemplate.convertAndSendToUser(participant.getUserId(), "/queue/approval",
                     ApprovalResult.builder().action("APPROVED").token(token)
                             .serverUrl(liveKitService.getLivekitServerUrl())
-                            .role("GUEST").message("Bạn đã được vào phòng.").build());
+                            .role("GUEST").message("Bạn đã được vào phòng.")
+                            .currentHostId(meeting.getHostId())
+                            .settings(meeting.getSettings()).build());
         } else if ("REJECTED".equals(req.getAction())) {
             participant.setApprovalStatus(Participant.ApprovalStatus.REJECTED);
             participantRepository.save(participant);
@@ -584,9 +593,29 @@ public class MeetingServiceImpl implements MeetingService {
         return true;
     }
 
-    private String resolveDisplayName(String requestedName, String userId) {
+    private String resolveDisplayName(String requestedName, String userId, String fallbackName) {
         if (requestedName != null && !requestedName.isBlank()) return requestedName.trim();
-        return "Participant";
+
+        try {
+            UserInfoResponse userInfo = identityGrpcClient.getUserById(userId);
+            if (userInfo.getFullName() != null && !userInfo.getFullName().isBlank()) {
+                return userInfo.getFullName().trim();
+            }
+        } catch (Exception e) {
+            log.warn("Could not resolve display name for user {}: {}", userId, e.getMessage());
+        }
+
+        return fallbackName;
+    }
+
+    private boolean shouldUpdateDisplayName(String currentName, String requestedName, String resolvedName) {
+        if (resolvedName == null || resolvedName.isBlank()) return false;
+        if (currentName == null || currentName.isBlank()) return true;
+        if (requestedName != null && !requestedName.isBlank()) {
+            return !currentName.equals(resolvedName);
+        }
+        return "Host".equals(currentName)
+                || "Participant".equals(currentName);
     }
 
     private MeetingHistoryResponse toHistoryResponse(Meeting m, String userId) {

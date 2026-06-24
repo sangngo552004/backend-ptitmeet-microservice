@@ -46,7 +46,7 @@ grpc:
     port: 9084
   client:
     meeting-grpc-client:
-      address: static://localhost:9082
+      address: ${GRPC_MEETING_ADDRESS:static://localhost:9082}
       negotiation-type: plaintext
 
 management:

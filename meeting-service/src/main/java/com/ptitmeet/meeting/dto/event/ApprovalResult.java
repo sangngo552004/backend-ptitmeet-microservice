@@ -12,4 +12,6 @@ public class ApprovalResult {
     private String serverUrl;
     private String role;
     private String message;
+    private String currentHostId;
+    private String settings;
 }

@@ -131,8 +131,16 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - LIVEKIT_WSURL=${LIVEKIT_WSURL}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - GRPC_IDENTITY_ADDRESS=static://identity-service:9081
+      - GRPC_CHAT_ADDRESS=static://chat-service:9083
+      - GRPC_MEDIA_ADDRESS=static://media-service:9084
     depends_on:
       - eureka-server
+      - identity-service
+      - chat-service
+      - media-service
+      - kafka
     networks:
       - ptitmeet-network
 
@@ -175,6 +183,8 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_LIVEKIT_RECORD_DOMAIN=${S3_LIVEKIT_RECORD_DOMAIN}
+      - MEETING_SERVICE_URL=http://meeting-service:8082
+      - GRPC_MEETING_ADDRESS=static://meeting-service:9082
     depends_on:
       - eureka-server
       - kafka

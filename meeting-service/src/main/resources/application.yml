@@ -10,13 +10,13 @@ grpc:
     port: 9082
   client:
     identity-grpc-client:
-      address: static://localhost:9081
+      address: ${GRPC_IDENTITY_ADDRESS:static://localhost:9081}
       negotiation-type: plaintext
     chat-grpc-client:
-      address: static://localhost:9083
+      address: ${GRPC_CHAT_ADDRESS:static://localhost:9083}
       negotiation-type: plaintext
     media-grpc-client:
-      address: static://localhost:9084
+      address: ${GRPC_MEDIA_ADDRESS:static://localhost:9084}
       negotiation-type: plaintext
 
 spring:
