@@ -68,12 +68,6 @@
             <artifactId>livekit-server</artifactId>
         </dependency>
 
-        <!-- Security Config (just for configuration, not full auth) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
         <!-- Common library -->
         <dependency>
             <groupId>com.ptitmeet</groupId>
