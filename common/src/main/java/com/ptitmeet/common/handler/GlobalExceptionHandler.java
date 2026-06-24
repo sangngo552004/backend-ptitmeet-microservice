@@ -7,6 +7,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -38,6 +39,14 @@ public class GlobalExceptionHandler {
 
         ApiResponse<Object> response = ApiResponse.error(ErrorCode.VALIDATION_FAILED.getCode(), 
                 ErrorCode.VALIDATION_FAILED.getMessage(), errors);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Object>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        ApiResponse<Object> response = ApiResponse.error(
+                ErrorCode.VALIDATION_FAILED.getCode(),
+                ErrorCode.VALIDATION_FAILED.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 

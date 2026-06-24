@@ -1,5 +1,10 @@
+FROM maven:3.9.8-eclipse-temurin-21 AS build
+
+WORKDIR /workspace
+COPY . .
+RUN mvn -pl meeting-service -am clean package -DskipTests
+
 FROM eclipse-temurin:21-jre-alpine
 VOLUME /tmp
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} app.jar
+COPY --from=build /workspace/meeting-service/target/meeting-service-*.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
