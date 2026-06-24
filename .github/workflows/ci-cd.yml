@@ -22,22 +22,21 @@ jobs:
         with:
           filters: |
             eureka:
-              - 'backend/eureka-server/**'
+              - 'eureka-server/**'
             gateway:
-              - 'backend/api-gateway/**'
-              - 'backend/common/**'
+              - 'api-gateway/**'
             identity:
-              - 'backend/identity-service/**'
-              - 'backend/common/**'
+              - 'identity-service/**'
+              - 'common/**'
             meeting:
-              - 'backend/meeting-service/**'
-              - 'backend/common/**'
+              - 'meeting-service/**'
+              - 'common/**'
             chat:
-              - 'backend/chat-service/**'
-              - 'backend/common/**'
+              - 'chat-service/**'
+              - 'common/**'
             media:
-              - 'backend/media-service/**'
-              - 'backend/common/**'
+              - 'media-service/**'
+              - 'common/**'
 
   build-and-push-eureka:
     needs: changes
@@ -51,10 +50,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
       - name: Build with Maven
-        working-directory: ./backend
         run: mvn clean package -pl eureka-server -am -DskipTests
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-eureka:latest ./backend/eureka-server
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-eureka:latest ./eureka-server
       - name: Push to Registry
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -72,10 +70,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
       - name: Build with Maven
-        working-directory: ./backend
         run: mvn clean package -pl identity-service -am -DskipTests
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-identity:latest ./backend/identity-service
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-identity:latest ./identity-service
       - name: Push to Registry
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -93,10 +90,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
       - name: Build with Maven
-        working-directory: ./backend
         run: mvn clean package -pl api-gateway -am -DskipTests
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-gateway:latest ./backend/api-gateway
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-gateway:latest ./api-gateway
       - name: Push to Registry
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -114,10 +110,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
       - name: Build with Maven
-        working-directory: ./backend
         run: mvn clean package -pl meeting-service -am -DskipTests
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-meeting:latest ./backend/meeting-service
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-meeting:latest ./meeting-service
       - name: Push to Registry
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -135,10 +130,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
       - name: Build with Maven
-        working-directory: ./backend
         run: mvn clean package -pl chat-service -am -DskipTests
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-chat:latest ./backend/chat-service
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-chat:latest ./chat-service
       - name: Push to Registry
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -156,10 +150,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
       - name: Build with Maven
-        working-directory: ./backend
         run: mvn clean package -pl media-service -am -DskipTests
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-media:latest ./backend/media-service
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-media:latest ./media-service
       - name: Push to Registry
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin

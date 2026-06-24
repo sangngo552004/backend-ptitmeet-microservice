@@ -4,9 +4,11 @@ server:
 spring:
   application:
     name: chat-service
+  config:
+    import: optional:file:../.env[.properties]
   data:
     mongodb:
-      uri: mongodb://${MONGO_USERNAME:ptitmeet}:${MONGO_PASSWORD:ptitmeet_mongo_pass}@${MONGO_HOST:localhost}:27017/ptitmeet_chat_db?authSource=admin
+      uri: ${MONGO_URI}
       database: ptitmeet_chat_db
 
 logging:

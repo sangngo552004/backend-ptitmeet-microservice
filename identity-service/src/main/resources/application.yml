@@ -12,10 +12,12 @@ grpc:
 spring:
   application:
     name: identity-service
+  config:
+    import: optional:file:../.env[.properties]
   datasource:
-    url: jdbc:mysql://${MYSQL_IDENTITY_HOST:localhost}:${MYSQL_IDENTITY_PORT:3307}/ptitmeet_identity_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
-    username: root
-    password: ${MYSQL_ROOT_PASSWORD:ptitmeet_root_pass}
+    url: ${DB_IDENTITY_URL}
+    username: ${DB_IDENTITY_USERNAME}
+    password: ${DB_IDENTITY_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -70,6 +72,7 @@ app:
 
 aws:
   s3:
+    enabled: true
     bucket: ${S3_BUCKET:ptitmeet-recordings}
     region: ${S3_REGION:ap-southeast-1}
     access-key: ${S3_ACCESS_KEY}

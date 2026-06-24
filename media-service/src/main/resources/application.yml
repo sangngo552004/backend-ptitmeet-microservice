@@ -4,10 +4,13 @@ server:
 spring:
   application:
     name: media-service
+  config:
+    import: optional:file:../.env[.properties]
   datasource:
-    url: jdbc:mysql://${MYSQL_MEDIA_HOST:localhost}:${MYSQL_MEDIA_PORT:3309}/ptitmeet_media_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: ${MYSQL_ROOT_PASSWORD:ptitmeet_root_pass}
+    url: ${DB_MEDIA_URL}
+    username: ${DB_MEDIA_USERNAME}
+    password: ${DB_MEDIA_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -27,6 +30,7 @@ livekit:
 
 aws:
   s3:
+    enabled: true
     bucket: ${S3_BUCKET:ptitmeet-recordings}
     region: ${S3_REGION:ap-southeast-1}
     access-key: ${S3_ACCESS_KEY:minioadmin}
