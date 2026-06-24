@@ -22,10 +22,13 @@ grpc:
 spring:
   application:
     name: meeting-service
+  config:
+    import: optional:file:../.env[.properties]
   datasource:
-    url: jdbc:mysql://${MYSQL_MEETING_HOST:localhost}:${MYSQL_MEETING_PORT:3308}/ptitmeet_meeting_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: ${MYSQL_ROOT_PASSWORD:ptitmeet_root_pass}
+    url: ${DB_MEETING_URL}
+    username: ${DB_MEETING_USERNAME}
+    password: ${DB_MEETING_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update

@@ -20,11 +20,10 @@ public interface MeetingRepository extends JpaRepository<Meeting, String> {
 
     // Phase 07: History — meetings mà user là participant
     @Query("""
-        SELECT DISTINCT m FROM Meeting m
-        JOIN m.participants p
+        SELECT DISTINCT p.meeting FROM Participant p
         WHERE p.userId = :userId
-        AND (:status = 'ALL' OR m.status = :statusEnum)
-        ORDER BY m.createdAt DESC
+        AND (:status = 'ALL' OR p.meeting.status = :statusEnum)
+        ORDER BY p.meeting.createdAt DESC
         """)
     Page<Meeting> findMeetingHistoryByUserId(
             @Param("userId") String userId,
@@ -34,12 +33,11 @@ public interface MeetingRepository extends JpaRepository<Meeting, String> {
 
     // Chỉ meetings mà user là host/owner
     @Query("""
-        SELECT DISTINCT m FROM Meeting m
-        JOIN m.participants p
+        SELECT DISTINCT p.meeting FROM Participant p
         WHERE p.userId = :userId
-        AND (m.ownerId = :userId OR m.hostId = :userId)
-        AND (:status = 'ALL' OR m.status = :statusEnum)
-        ORDER BY m.createdAt DESC
+        AND (p.meeting.ownerId = :userId OR p.meeting.hostId = :userId)
+        AND (:status = 'ALL' OR p.meeting.status = :statusEnum)
+        ORDER BY p.meeting.createdAt DESC
         """)
     Page<Meeting> findHostMeetingHistoryByUserId(
             @Param("userId") String userId,
@@ -49,12 +47,11 @@ public interface MeetingRepository extends JpaRepository<Meeting, String> {
 
     // Chỉ meetings mà user là guest (không phải owner)
     @Query("""
-        SELECT DISTINCT m FROM Meeting m
-        JOIN m.participants p
+        SELECT DISTINCT p.meeting FROM Participant p
         WHERE p.userId = :userId
-        AND m.ownerId != :userId
-        AND (:status = 'ALL' OR m.status = :statusEnum)
-        ORDER BY m.createdAt DESC
+        AND p.meeting.ownerId != :userId
+        AND (:status = 'ALL' OR p.meeting.status = :statusEnum)
+        ORDER BY p.meeting.createdAt DESC
         """)
     Page<Meeting> findGuestMeetingHistoryByUserId(
             @Param("userId") String userId,
