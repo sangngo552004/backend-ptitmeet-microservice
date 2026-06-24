@@ -64,15 +64,20 @@ services:
       - ptitmeet-network
 
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
     container_name: ptitmeet-api-gateway
     ports:
       - "8080:8080"
     environment:
       - _JAVA_OPTIONS=-Xms256m -Xmx256m
       - EUREKA_HOST=eureka-server
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       - eureka-server
+      - redis
     networks:
       - ptitmeet-network
 

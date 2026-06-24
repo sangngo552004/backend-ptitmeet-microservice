@@ -1,1 +1,2 @@
+com.ptitmeet.common.config.CommonAutoConfiguration
 com.ptitmeet.common.config.S3Config
