@@ -18,7 +18,7 @@ services:
     container_name: ptitmeet-kafka
     ports:
       - "9092:9092"
-      - "9101:9101"    # JMX (optional, debug)
+      - "9101:9101" # JMX (optional, debug)
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -46,7 +46,7 @@ services:
     networks:
       - ptitmeet-network
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka:29092"]
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka:29092" ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -54,7 +54,7 @@ services:
 
   # Eureka Server
   eureka-server:
-    build: ./backend/eureka-server
+    build: ./eureka-server
     container_name: ptitmeet-eureka
     ports:
       - "8761:8761"
@@ -64,7 +64,7 @@ services:
       - ptitmeet-network
 
   api-gateway:
-    build: ./backend/api-gateway
+    build: ./api-gateway
     container_name: ptitmeet-api-gateway
     ports:
       - "8080:8080"
@@ -77,7 +77,7 @@ services:
       - ptitmeet-network
 
   identity-service:
-    build: ./backend/identity-service
+    build: ./identity-service
     container_name: ptitmeet-identity
     ports:
       - "8081:8081"
@@ -108,7 +108,7 @@ services:
       - ptitmeet-network
 
   meeting-service:
-    build: ./backend/meeting-service
+    build: ./meeting-service
     container_name: ptitmeet-meeting
     ports:
       - "8082:8082"
@@ -129,7 +129,7 @@ services:
       - ptitmeet-network
 
   chat-service:
-    build: ./backend/chat-service
+    build: ./chat-service
     container_name: ptitmeet-chat
     ports:
       - "8083:8083"
@@ -146,7 +146,7 @@ services:
       - ptitmeet-network
 
   media-service:
-    build: ./backend/media-service
+    build: ./media-service
     container_name: ptitmeet-media
     ports:
       - "8084:8084"
@@ -172,7 +172,6 @@ services:
       - kafka
     networks:
       - ptitmeet-network
-
 
 volumes:
   redis_data:
