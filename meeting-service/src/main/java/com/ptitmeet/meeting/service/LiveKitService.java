@@ -18,6 +18,9 @@ public class LiveKitService {
     @Value("${livekit.api-secret}")
     private String apiSecret;
 
+    @Value("${livekit.ws-url}")
+    private String wsUrl;
+
     public String generateJoinToken(String roomName, String participantIdentity,
                                      String participantName, boolean isHost) {
 
@@ -41,6 +44,9 @@ public class LiveKitService {
     }
 
     public String getLivekitServerUrl() {
+        if (wsUrl != null && !wsUrl.trim().isEmpty()) {
+            return wsUrl.trim();
+        }
         return livekitHost.replace("https://", "wss://")
                           .replace("http://", "ws://");
     }

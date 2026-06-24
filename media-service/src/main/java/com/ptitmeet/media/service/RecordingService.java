@@ -50,6 +50,9 @@ public class RecordingService {
     @Value("${aws.s3.secret-key}")
     private String s3SecretKey;
 
+    @Value("${aws.s3.endpoint}")
+    private String s3Endpoint;
+
     @Transactional
     public RecordingResponse startRecording(String callerUserId, String meetingCode) {
         // 0. Verify owner via Meeting Service
@@ -76,12 +79,7 @@ public class RecordingService {
                     EncodedFileOutput.newBuilder()
                             .setFileType(EncodedFileType.MP4)
                             .setFilepath(objectKey)
-                            .setS3(S3Upload.newBuilder()
-                                    .setAccessKey(s3AccessKey)
-                                    .setSecret(s3SecretKey)
-                                    .setBucket(s3Bucket)
-                                    .setRegion(s3Region)
-                                    .build())
+                            .setS3(buildS3Upload())
                             .build()
             ).execute().body();
         } catch (Exception e) {
@@ -100,6 +98,19 @@ public class RecordingService {
 
         recording = meetingRecordingRepository.save(recording);
         return toResponse(recording);
+    }
+
+    private S3Upload buildS3Upload() {
+        S3Upload.Builder builder = S3Upload.newBuilder()
+                .setAccessKey(s3AccessKey)
+                .setSecret(s3SecretKey)
+                .setBucket(s3Bucket)
+                .setRegion(s3Region);
+        
+        if (s3Endpoint != null && !s3Endpoint.trim().isEmpty()) {
+            builder.setEndpoint(s3Endpoint);
+        }
+        return builder.build();
     }
 
     public void stopRecording(String egressId) {

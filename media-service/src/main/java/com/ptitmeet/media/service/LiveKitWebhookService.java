@@ -26,6 +26,9 @@ public class LiveKitWebhookService {
     @Value("${livekit.api-secret}")
     private String apiSecret;
 
+    @Value("${aws.s3.livekit-record-domain}")
+    private String livekitRecordDomain;
+
     private final MeetingRecordingRepository recordingRepository;
 
     public String processWebhook(String body, String authHeader) {
@@ -81,7 +84,17 @@ public class LiveKitWebhookService {
         try {
             if (!egressInfo.getFileResultsList().isEmpty()) {
                 var fileResult = egressInfo.getFileResults(0);
-                return fileResult.getLocation(); // s3:// hoặc https:// URL
+                String location = fileResult.getLocation(); // s3:// hoặc https:// URL
+                
+                if (livekitRecordDomain != null && !livekitRecordDomain.trim().isEmpty()) {
+                    String domain = livekitRecordDomain.trim();
+                    if (!domain.endsWith("/")) {
+                        domain += "/";
+                    }
+                    return domain + fileResult.getFilename();
+                }
+                
+                return location;
             }
         } catch (Exception e) {
             log.error("Error extracting file URL: {}", e.getMessage());

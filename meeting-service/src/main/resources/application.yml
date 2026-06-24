@@ -55,6 +55,7 @@ livekit:
   host: ${LIVEKIT_HOST:http://localhost:7880}
   api-key: ${LIVEKIT_API_KEY:devkey}
   api-secret: ${LIVEKIT_API_SECRET:secret}
+  ws-url: ${LIVEKIT_WSURL:}
 
 # Services URLs (cho Phase 10 gRPC, để placeholder)
 services:
