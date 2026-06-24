@@ -39,7 +39,7 @@ eureka:
     prefer-ip-address: true
 
 jwt:
-  secret: ${JWT_SECRET:default-secret-key-change-in-production-min-256-bit}
+  secret: ${JWT_SECRET:djhskjdfhjksdhfkjdshfjkhskdjfdsfdskjfhkdshfkjdshfhsdjfhkdsjhfkjdshkfjadsjkfhksdjhfiyeiureifhdskhfaldsfjajoewhsdkfhkdjfhk}
 
 management:
   endpoints:

@@ -36,6 +36,11 @@ public class JwtAuthFilterFactory extends AbstractGatewayFilterFactory<JwtAuthFi
                 return chain.filter(exchange);
             }
 
+            // Bỏ qua check token đối với các request OPTIONS (CORS preflight)
+            if (exchange.getRequest().getMethod().name().equals("OPTIONS")) {
+                return chain.filter(exchange);
+            }
+
             String token = null;
             String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
 
@@ -49,7 +54,8 @@ public class JwtAuthFilterFactory extends AbstractGatewayFilterFactory<JwtAuthFi
             }
 
             if (token == null) {
-                return unauthorizedResponse(exchange);
+                System.out.println("Missing Authorization header or token query parameter");
+                return errorResponse(exchange, 4012, "MISSING_TOKEN", HttpStatus.UNAUTHORIZED);
             }
 
             try {
@@ -57,11 +63,10 @@ public class JwtAuthFilterFactory extends AbstractGatewayFilterFactory<JwtAuthFi
                 String userId = claims.getSubject();
                 String email = claims.get("email", String.class);
                 String jti = claims.getId();
-
                 return reactiveRedisTemplate.hasKey("auth:blacklist:" + jti)
                         .flatMap(isBlacklisted -> {
                             if (Boolean.TRUE.equals(isBlacklisted)) {
-                                return unauthorizedResponse(exchange);
+                                return errorResponse(exchange, 4013, "TOKEN_BLACKLISTED", HttpStatus.UNAUTHORIZED);
                             }
                             
                             ServerWebExchange mutated = exchange.mutate()
@@ -74,9 +79,11 @@ public class JwtAuthFilterFactory extends AbstractGatewayFilterFactory<JwtAuthFi
                         });
 
             } catch (ExpiredJwtException e) {
+                System.out.println("JWT expired: " + e.getMessage());
                 return errorResponse(exchange, 4011, "JWT_EXPIRED", HttpStatus.UNAUTHORIZED);
             } catch (JwtException e) {
-                return errorResponse(exchange, 4010, "UNAUTHORIZED", HttpStatus.UNAUTHORIZED);
+                System.out.println("JWT validation error: " + e.getMessage());
+                return errorResponse(exchange, 4010, "INVALID_TOKEN: " + e.getMessage(), HttpStatus.UNAUTHORIZED);
             }
         };
     }

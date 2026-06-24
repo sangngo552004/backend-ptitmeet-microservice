@@ -53,7 +53,7 @@ eureka:
     instance-id: ${spring.application.name}:${server.port}
 
 jwt:
-  secret: ${JWT_SECRET:default-secret-key-change-in-production-min-256-bit}
+  secret: ${JWT_SECRET:djhskjdfhjksdhfkjdshfjkhskdjfdsfdskjfhkdshfkjdshfhsdjfhkdsjhfkjdshkfjadsjkfhksdjhfiyeiureifhdskhfaldsfjajoewhsdkfhkdjfhk}
   access-token-expiration: 1800000      # 30 phút (ms)
   refresh-token-expiration: 2592000     # 30 ngày (giây) - dùng cho Redis TTL
   reset-token-expiration: 900           # 15 phút (giây) - dùng cho Redis TTL
