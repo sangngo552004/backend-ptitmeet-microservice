@@ -9,12 +9,14 @@ import com.ptitmeet.common.exception.ErrorCode;
 import com.ptitmeet.identity.dto.request.*;
 import com.ptitmeet.identity.dto.response.AuthResponse;
 import com.ptitmeet.identity.dto.response.UserResponse;
+import com.ptitmeet.identity.dto.response.VerifyResetOtpResponse;
 import com.ptitmeet.identity.entity.User;
 import com.ptitmeet.identity.mapper.UserMapper;
 import com.ptitmeet.identity.repository.UserRepository;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -22,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -42,6 +45,14 @@ public class AuthService {
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
+
+    @Value("${spring.mail.username:}")
+    private String mailFrom;
+
+    private static final int MOBILE_RESET_OTP_EXPIRATION_MINUTES = 10;
+    private static final long MOBILE_RESET_OTP_EXPIRATION_SECONDS = MOBILE_RESET_OTP_EXPIRATION_MINUTES * 60L;
+
+    private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
     public UserResponse register(RegisterRequest req) {
@@ -134,6 +145,7 @@ public class AuthService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            setFromIfConfigured(helper);
             helper.setTo(req.getEmail());
             helper.setSubject("PTITMeet — Đặt lại mật khẩu");
             String resetLink = frontendUrl + "/reset-password?token=" + token;
@@ -147,6 +159,44 @@ public class AuthService {
             log.error("Failed to send forgot password email", e);
             throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public void forgotPasswordMobile(ForgotPasswordRequest req) {
+        String normalizedEmail = normalizeEmail(req.getEmail());
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String otp = generateSixDigitOtp();
+        redisTokenService.saveResetOtp(normalizedEmail, otp, MOBILE_RESET_OTP_EXPIRATION_SECONDS);
+        try {
+            sendPasswordResetOtpEmail(user, otp);
+        } catch (AppException exception) {
+            redisTokenService.deleteResetOtp(normalizedEmail);
+            throw exception;
+        }
+    }
+
+    public VerifyResetOtpResponse verifyResetOtp(VerifyResetOtpRequest req) {
+        String normalizedEmail = normalizeEmail(req.getEmail());
+        String expectedOtp = redisTokenService.getResetOtp(normalizedEmail);
+
+        if (expectedOtp == null) {
+            throw new AppException(ErrorCode.EXPIRED_RESET_OTP);
+        }
+        if (!expectedOtp.equals(req.getOtp())) {
+            throw new AppException(ErrorCode.INVALID_RESET_OTP);
+        }
+
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        redisTokenService.deleteResetOtp(normalizedEmail);
+        String resetToken = UUID.randomUUID().toString();
+        redisTokenService.saveResetToken(resetToken, user.getUserId());
+
+        return VerifyResetOtpResponse.builder()
+                .resetToken(resetToken)
+                .build();
     }
 
     @Transactional
@@ -199,5 +249,51 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .user(userMapper.toUserResponse(user))
                 .build();
+    }
+
+    private void sendPasswordResetOtpEmail(User user, String otp) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            setFromIfConfigured(message);
+            message.setTo(user.getEmail());
+            message.setSubject("PTITMeet - Mobile password reset OTP");
+            message.setText(String.format(
+                    "Xin chao %s,%n%n"
+                            + "Ma OTP dat lai mat khau PTITMeet cua ban la: %s%n%n"
+                            + "Ma nay se het han sau %d phut va chi dung duoc mot lan.%n%n"
+                            + "Neu ban khong yeu cau dat lai mat khau, vui long bo qua email nay.%n%n"
+                            + "PTITMeet Team",
+                    safeName(user.getFullName()),
+                    otp,
+                    MOBILE_RESET_OTP_EXPIRATION_MINUTES));
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send mobile reset OTP email", e);
+            throw new AppException(ErrorCode.EMAIL_DELIVERY_FAILED);
+        }
+    }
+
+    private void setFromIfConfigured(MimeMessageHelper helper) throws jakarta.mail.MessagingException {
+        if (mailFrom != null && !mailFrom.isBlank()) {
+            helper.setFrom(mailFrom);
+        }
+    }
+
+    private void setFromIfConfigured(SimpleMailMessage message) {
+        if (mailFrom != null && !mailFrom.isBlank()) {
+            message.setFrom(mailFrom);
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    private String safeName(String name) {
+        return name == null || name.isBlank() ? "ban" : name.trim();
+    }
+
+    private String generateSixDigitOtp() {
+        return String.format("%06d", secureRandom.nextInt(1_000_000));
     }
 }

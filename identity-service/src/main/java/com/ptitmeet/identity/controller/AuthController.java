@@ -7,6 +7,7 @@ import com.ptitmeet.identity.config.JwtProperties;
 import com.ptitmeet.identity.dto.request.*;
 import com.ptitmeet.identity.dto.response.AuthResponse;
 import com.ptitmeet.identity.dto.response.UserResponse;
+import com.ptitmeet.identity.dto.response.VerifyResetOtpResponse;
 import com.ptitmeet.identity.service.AuthService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,6 +48,18 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
         authService.forgotPassword(req);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/forgot-password-mobile")
+    public ResponseEntity<ApiResponse<Void>> forgotPasswordMobile(@Valid @RequestBody ForgotPasswordRequest req) {
+        authService.forgotPasswordMobile(req);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/verify-reset-otp")
+    public ResponseEntity<ApiResponse<VerifyResetOtpResponse>> verifyResetOtp(
+            @Valid @RequestBody VerifyResetOtpRequest req) {
+        return ResponseEntity.ok(ApiResponse.success(authService.verifyResetOtp(req)));
     }
 
     @PostMapping("/reset-password")

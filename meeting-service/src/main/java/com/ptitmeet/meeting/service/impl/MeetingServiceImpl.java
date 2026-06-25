@@ -58,6 +58,7 @@ public class MeetingServiceImpl implements MeetingService {
     private final ChatGrpcClient chatGrpcClient;
     private final MediaGrpcClient mediaGrpcClient;
 
+    private static final String MEETING_ENDED_ACTION = "MEETING_ENDED";
     private static final String DEFAULT_SETTINGS =
             "{\"waitingRoom\":true,\"muteOnEntry\":false,\"cameraOffOnEntry\":false,\"allowChat\":true,\"allowScreenShare\":true}";
 
@@ -117,8 +118,15 @@ public class MeetingServiceImpl implements MeetingService {
                 .settings(req.getSettings() != null ? req.getSettings() : DEFAULT_SETTINGS)
                 .build());
 
-        List<String> emails = req.getParticipantEmails();
-        if (emails != null && !emails.isEmpty()) {
+        participantRepository.save(Participant.builder()
+                .meeting(meeting).userId(userId)
+                .displayName(resolveDisplayName(null, userId, "Host"))
+                .role(Participant.Role.HOST)
+                .approvalStatus(Participant.ApprovalStatus.APPROVED)
+                .build());
+
+        List<String> emails = normalizeEmails(req.getParticipantEmails());
+        if (!emails.isEmpty()) {
             emails.forEach(email -> meetingInvitationRepository.save(
                     MeetingInvitation.builder().meeting(meeting).email(email).build()));
             try {
@@ -208,7 +216,12 @@ public class MeetingServiceImpl implements MeetingService {
             meetingRepository.save(meeting);
         }
 
-        if (!isPrivileged) checkAccessType(meeting, userEmail);
+        boolean waitingRoomEnabled = parseWaitingRoomSetting(meeting.getSettings());
+        boolean passesAccessPolicy = isPrivileged || isAccessAllowedByPolicy(meeting, userEmail);
+        if (!isPrivileged && !passesAccessPolicy
+                && !(meeting.getAccessType() == Meeting.AccessType.TRUSTED && waitingRoomEnabled)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
 
         if (!isPrivileged && meeting.getPassword() != null && !meeting.getPassword().isBlank()) {
             if (req.getPassword() == null || !meeting.getPassword().equals(req.getPassword())) {
@@ -239,7 +252,6 @@ public class MeetingServiceImpl implements MeetingService {
             participantRepository.save(participant);
         }
 
-        boolean waitingRoomEnabled = parseWaitingRoomSetting(meeting.getSettings());
         boolean shouldGoToWaiting = !isPrivileged && waitingRoomEnabled
                 && participant.getApprovalStatus() != Participant.ApprovalStatus.APPROVED;
 
@@ -337,7 +349,7 @@ public class MeetingServiceImpl implements MeetingService {
                         String newHostName = nextSession.getParticipant().getDisplayName();
                         meeting.setHostId(newHostId);
                         meetingRepository.save(meeting);
-                        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode,
+                        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/system",
                                 SystemEvent.builder().action("HOST_TRANSFERRED")
                                         .newHostId(newHostId).newHostName(newHostName).build());
                     });
@@ -363,8 +375,9 @@ public class MeetingServiceImpl implements MeetingService {
         meeting.setEndTime(LocalDateTime.now());
         meetingRepository.save(meeting);
 
-        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode,
-                SystemEvent.builder().action("END_MEETING_FOR_ALL").build());
+        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/system",
+                SystemEvent.builder().action(MEETING_ENDED_ACTION).build());
+        liveKitService.endRoom(meetingCode);
     }
 
     @Override
@@ -417,7 +430,7 @@ public class MeetingServiceImpl implements MeetingService {
                             }));
         }
 
-        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode,
+        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/system",
                 SystemEvent.builder().action(message.getAction())
                         .targetUserId(message.getTargetUserId())
                         .egressId(message.getEgressId()).build());
@@ -562,21 +575,46 @@ public class MeetingServiceImpl implements MeetingService {
     // Private helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void checkAccessType(Meeting meeting, String userEmail) {
-        switch (meeting.getAccessType()) {
-            case OPEN -> { /* open to all */ }
-            case TRUSTED -> {
-                String domain = meeting.getAllowedDomain();
-                if (domain == null || userEmail == null || !userEmail.endsWith("@" + domain)) {
-                    throw new AppException(ErrorCode.ACCESS_DENIED);
-                }
-            }
-            case RESTRICTED -> {
-                if (!meetingInvitationRepository.existsByMeetingAndEmail(meeting, userEmail)) {
-                    throw new AppException(ErrorCode.ACCESS_DENIED);
-                }
-            }
+    private boolean isAccessAllowedByPolicy(Meeting meeting, String userEmail) {
+        String normalizedEmail = normalizeEmail(userEmail);
+        return switch (meeting.getAccessType()) {
+            case OPEN -> true;
+            case TRUSTED -> isInvited(meeting, normalizedEmail)
+                    || isEmailInAllowedDomain(normalizedEmail, meeting.getAllowedDomain());
+            case RESTRICTED -> isInvited(meeting, normalizedEmail);
+        };
+    }
+
+    private boolean isInvited(Meeting meeting, String normalizedEmail) {
+        return !normalizedEmail.isBlank()
+                && meetingInvitationRepository.existsByMeetingAndEmailIgnoreCase(meeting, normalizedEmail);
+    }
+
+    private boolean isEmailInAllowedDomain(String normalizedEmail, String allowedDomain) {
+        if (normalizedEmail.isBlank() || allowedDomain == null || allowedDomain.isBlank()) {
+            return false;
         }
+        String normalizedDomain = allowedDomain.trim().toLowerCase(Locale.ROOT);
+        if (normalizedDomain.startsWith("@")) {
+            normalizedDomain = normalizedDomain.substring(1);
+        }
+        return normalizedEmail.endsWith("@" + normalizedDomain)
+                || normalizedEmail.endsWith("." + normalizedDomain);
+    }
+
+    private List<String> normalizeEmails(List<String> emails) {
+        if (emails == null) {
+            return Collections.emptyList();
+        }
+        return emails.stream()
+                .map(this::normalizeEmail)
+                .filter(email -> !email.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
     }
 
     private boolean parseWaitingRoomSetting(String settingsJson) {
@@ -654,7 +692,7 @@ public class MeetingServiceImpl implements MeetingService {
         }
 
         // Broadcast STOMP event
-        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode,
+        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/system",
                 SystemEvent.builder()
                         .action("RECORDING_STARTED")
                         .egressId(recordingResponse.getEgressId())
@@ -672,7 +710,7 @@ public class MeetingServiceImpl implements MeetingService {
 
         mediaGrpcClient.stopRecording(egressId);
 
-        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode,
+        messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/system",
                 SystemEvent.builder()
                         .action("RECORDING_STOPPED")
                         .egressId(egressId)

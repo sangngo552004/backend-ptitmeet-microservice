@@ -62,6 +62,18 @@ public class RedisTokenService {
         return userId;
     }
 
+    public void saveResetOtp(String email, String otp, long ttlSeconds) {
+        stringRedisTemplate.opsForValue().set(resetOtpKey(email), otp, ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    public String getResetOtp(String email) {
+        return stringRedisTemplate.opsForValue().get(resetOtpKey(email));
+    }
+
+    public void deleteResetOtp(String email) {
+        stringRedisTemplate.delete(resetOtpKey(email));
+    }
+
     public void blacklistAccessToken(String jti, long ttlSeconds) {
         String key = "auth:blacklist:" + jti;
         stringRedisTemplate.opsForValue().set(key, "1", ttlSeconds, TimeUnit.SECONDS);
@@ -69,5 +81,9 @@ public class RedisTokenService {
 
     public Boolean isBlacklisted(String jti) {
         return stringRedisTemplate.hasKey("auth:blacklist:" + jti);
+    }
+
+    private String resetOtpKey(String email) {
+        return "auth:reset-otp:" + email;
     }
 }

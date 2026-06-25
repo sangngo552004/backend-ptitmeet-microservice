@@ -1,11 +1,14 @@
 package com.ptitmeet.meeting.service;
 
 import io.livekit.server.AccessToken;
+import io.livekit.server.RoomServiceClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
+@Slf4j
 @Service
 public class LiveKitService {
 
@@ -49,5 +52,17 @@ public class LiveKitService {
         }
         return livekitHost.replace("https://", "wss://")
                           .replace("http://", "ws://");
+    }
+
+    public void endRoom(String roomName) {
+        if (roomName == null || roomName.trim().isEmpty()) {
+            return;
+        }
+        try {
+            RoomServiceClient roomClient = RoomServiceClient.create(livekitHost, apiKey, apiSecret);
+            roomClient.deleteRoom(roomName).execute();
+        } catch (Exception exception) {
+            log.warn("Could not delete LiveKit room {}: {}", roomName, exception.getMessage());
+        }
     }
 }

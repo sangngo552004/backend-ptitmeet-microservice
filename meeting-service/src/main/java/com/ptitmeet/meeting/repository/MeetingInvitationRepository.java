@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface MeetingInvitationRepository extends JpaRepository<MeetingInvitation, Long> {
     boolean existsByMeetingAndEmail(Meeting meeting, String email);
+
+    boolean existsByMeetingAndEmailIgnoreCase(Meeting meeting, String email);
 }
