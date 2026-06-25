@@ -15,6 +15,7 @@ jobs:
       meeting: ${{ steps.filter.outputs.meeting }}
       chat: ${{ steps.filter.outputs.chat }}
       media: ${{ steps.filter.outputs.media }}
+      notification: ${{ steps.filter.outputs.notification }}
     steps:
       - uses: actions/checkout@v3
       - uses: dorny/paths-filter@v2
@@ -36,6 +37,9 @@ jobs:
               - 'common/**'
             media:
               - 'media-service/**'
+              - 'common/**'
+            notification:
+              - 'notification-service/**'
               - 'common/**'
 
   build-and-push-eureka:
@@ -158,8 +162,28 @@ jobs:
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           docker push ${{ secrets.DOCKER_USERNAME }}/ptitmeet-media:latest
 
+  build-and-push-notification:
+    needs: changes
+    if: ${{ needs.changes.outputs.notification == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Build with Maven
+        run: mvn clean package -pl notification-service -am -DskipTests
+      - name: Build Docker Image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ptitmeet-notification:latest ./notification-service
+      - name: Push to Registry
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker push ${{ secrets.DOCKER_USERNAME }}/ptitmeet-notification:latest
+
   deploy-to-ec2:
-    needs: [build-and-push-eureka, build-and-push-identity, build-and-push-gateway, build-and-push-meeting, build-and-push-chat, build-and-push-media]
+    needs: [build-and-push-eureka, build-and-push-identity, build-and-push-gateway, build-and-push-meeting, build-and-push-chat, build-and-push-media, build-and-push-notification]
     if: always()
     runs-on: ubuntu-latest
     steps:

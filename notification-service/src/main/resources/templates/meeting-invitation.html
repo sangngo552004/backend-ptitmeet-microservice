@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Thư mời tham gia phòng họp</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #4F46E5;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+            color: #333333;
+            line-height: 1.6;
+        }
+        .content p {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        .meeting-details {
+            background-color: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .detail-item {
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        .detail-item span {
+            font-weight: 600;
+            color: #4B5563;
+            display: inline-block;
+            width: 100px;
+        }
+        .action-button {
+            display: block;
+            width: 200px;
+            margin: 30px auto;
+            padding: 14px 20px;
+            background-color: #4F46E5;
+            color: #ffffff !important;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .footer {
+            background-color: #F9FAFB;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #6B7280;
+            border-top: 1px solid #E5E7EB;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Lời Mời Tham Gia Cuộc Họp</h1>
+        </div>
+        
+        <div class="content">
+            <p>Xin chào,</p>
+            <p>Bạn vừa nhận được lời mời tham gia một cuộc họp trên hệ thống <strong>PTITMeet</strong>. Dưới đây là thông tin chi tiết về cuộc họp:</p>
+            
+            <div class="meeting-details">
+                <div class="detail-item">
+                    <span>Chủ đề:</span>
+                    <strong th:text="${title}">Họp Team Hàng Tuần</strong>
+                </div>
+                <div class="detail-item">
+                    <span>Mã phòng:</span>
+                    <strong th:text="${meetingCode}">ABC-123</strong>
+                </div>
+                <div class="detail-item" th:if="${startTime != null}">
+                    <span>Thời gian:</span>
+                    <strong th:text="${startTime}">10:00 AM, 25/06/2026</strong>
+                </div>
+            </div>
+            
+            <p>Để tham gia cuộc họp, vui lòng bấm vào nút bên dưới vào đúng thời gian diễn ra:</p>
+            
+            <a th:href="${joinLink}" class="action-button">Tham Gia Cuộc Họp</a>
+            
+            <p style="margin-top: 30px; font-size: 14px; color: #6B7280;">Nếu nút bấm không hoạt động, bạn có thể copy và dán đường dẫn sau vào trình duyệt:<br>
+            <a th:href="${joinLink}" th:text="${joinLink}" style="color: #4F46E5; word-break: break-all;">http://localhost:3000/meeting/ABC-123</a></p>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2026 PTITMeet Platform. All rights reserved.</p>
+            <p>Đây là email tự động, vui lòng không trả lời.</p>
+        </div>
+    </div>
+</body>
+</html>

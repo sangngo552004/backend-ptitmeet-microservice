@@ -10,7 +10,9 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-@Configuration
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+
+@AutoConfiguration
 @ConditionalOnProperty(prefix = "aws.s3", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(S3Properties.class)
 @RequiredArgsConstructor
